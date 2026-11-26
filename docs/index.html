@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TreeKV-Engine — Interactive LLM Inference Visualizer &amp; Tesla T4 Benchmarks</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #0B1120; color: #E2E8F0; }
+    .font-mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace; }
+    .block-cell { transition: transform 140ms ease, box-shadow 140ms ease, background-color 180ms ease; }
+    .block-cell:hover { transform: translateY(-2px) scale(1.04); z-index: 10; }
+    .tab-active { background: linear-gradient(135deg, #0F766E 0%, #0D9488 100%); color: #FFFFFF; box-shadow: 0 4px 16px rgba(20, 184, 166, 0.25); }
+    .tab-idle { background-color: #1E293B; color: #94A3B8; }
+    .tab-idle:hover { background-color: #334155; color: #F8FAFC; }
+    input[type="range"] { accent-color: #14B8A6; }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-teal-500/30 selection:text-teal-200">
+  <!-- Top Header -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+          <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v6m0 0l-6 6m6-6l6 6M6 15v6m12-6v6" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">TreeKV-Engine</h1>
+            <span class="px-2 py-0.5 text-[11px] font-mono font-semibold rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">v1.0.0</span>
+          </div>
+          <p class="text-xs text-slate-400">From-Scratch PyTorch LLM Inference Engine · Qwen2.5-0.5B (FP16)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/25">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          12/12 Tests Passed (HF Exact Match)
+        </span>
+        <a href="https://github.com/swayamsaini/treekv-engine" target="_blank" rel="noopener noreferrer"
+           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 transition">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          GitHub Repo
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <!-- Hero KPI Strip (Real Verified T4 Measurements) -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4">
+        <p class="text-xs font-medium text-slate-400">Median TTFT (Best-of-8)</p>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span class="text-2xl font-extrabold text-teal-400 font-mono">-20.6%</span>
+          <span class="text-xs text-slate-400 font-mono">222.8 → 177.0 ms</span>
+        </div>
+        <p class="mt-1 text-[11px] text-slate-500">Measured on NVIDIA Tesla T4 (FP16)</p>
+      </div>
+      <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4">
+        <p class="text-xs font-medium text-slate-400">Decode Throughput</p>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span class="text-2xl font-extrabold text-emerald-400 font-mono">+7.2%</span>
+          <span class="text-xs text-slate-400 font-mono">26.52 ± 0.73 tok/s</span>
+        </div>
+        <p class="mt-1 text-[11px] text-slate-500">5 CUDA-synced repeats (95% CI)</p>
+      </div>
+      <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4">
+        <p class="text-xs font-medium text-slate-400">Tail Latency (E2E p99)</p>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span class="text-2xl font-extrabold text-sky-400 font-mono">-9.1%</span>
+          <span class="text-xs text-slate-400 font-mono">11.02 → 10.02 s</span>
+        </div>
+        <p class="mt-1 text-[11px] text-slate-500">Radix prefix sharing + Paged KV</p>
+      </div>
+      <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4">
+        <p class="text-xs font-medium text-slate-400">KV Block Footprint (FP16)</p>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span class="text-2xl font-extrabold text-indigo-400 font-mono">192 KB</span>
+          <span class="text-xs text-slate-400 font-mono">16 tok · 24 layers</span>
+        </div>
+        <p class="mt-1 text-[11px] text-slate-500">7:1 GQA (14 Q heads / 2 KV heads)</p>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex flex-wrap gap-2 border-b border-slate-800 pb-3" aria-label="Visualizer Views">
+      <button id="tab-radix" type="button" class="tab-active px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">
+        1. Paged KV &amp; Radix Tree-KV Simulator
+      </button>
+      <button id="tab-spec" type="button" class="tab-idle px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">
+        2. Speculative Decoding &amp; Rollback
+      </button>
+      <button id="tab-bench" type="button" class="tab-idle px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition">
+        3. Verified Tesla T4 Benchmarks
+      </button>
+    </nav>
+
+    <!-- ================= PANEL 1: PAGED KV & RADIX TREE-KV ================= -->
+    <section id="panel-radix" class="space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <!-- Controls Card -->
+        <div class="lg:col-span-4 rounded-xl bg-slate-900/90 border border-slate-800 p-5 space-y-5">
+          <div>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Workload Controls</h2>
+            <p class="text-xs text-slate-400 mt-1">Compare standard Paged KV against Radix Tree-KV prefix sharing for parallel Best-of-N reasoning.</p>
+          </div>
+
+          <!-- Mode Toggle -->
+          <div class="grid grid-cols-2 gap-2 p-1 rounded-lg bg-slate-950 border border-slate-800">
+            <button id="btn-mode-noradix" type="button" class="px-3 py-2 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition">
+              No-Radix (Paged)
+            </button>
+            <button id="btn-mode-radix" type="button" class="px-3 py-2 rounded-md text-xs font-semibold bg-teal-600 text-white shadow transition">
+              With Radix (Tree-KV)
+            </button>
+          </div>
+
+          <!-- Sliders -->
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium">Best-of-N Parallel Branches</span>
+                <span id="val-branches" class="font-mono font-bold text-teal-400">8 branches</span>
+              </div>
+              <input id="slider-branches" type="range" min="2" max="16" step="1" value="8" class="w-full cursor-pointer" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium">Shared Prompt Length</span>
+                <span id="val-prompt" class="font-mono font-bold text-teal-400">64 tokens (4 blocks)</span>
+              </div>
+              <input id="slider-prompt" type="range" min="32" max="512" step="16" value="64" class="w-full cursor-pointer" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium">Generated Tokens / Branch</span>
+                <span id="val-decode" class="font-mono font-bold text-indigo-400">32 tokens (2 blocks)</span>
+              </div>
+              <input id="slider-decode" type="range" min="16" max="64" step="16" value="32" class="w-full cursor-pointer" />
+            </div>
+          </div>
+
+          <!-- Interactive Actions -->
+          <div class="pt-2 border-t border-slate-800 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <button id="btn-step-decode" type="button" class="px-3 py-2 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition">
+                + Step 16 Tokens
+              </button>
+              <button id="btn-cow-split" type="button" class="px-3 py-2 rounded-lg text-xs font-semibold bg-amber-600/90 hover:bg-amber-500 text-white transition">
+                Trigger CoW Split
+              </button>
+            </div>
+            <button id="btn-radix-reset" type="button" class="w-full px-3 py-2 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+              Reset to T4 Benchmark Preset (N=8, P=64, D=32)
+            </button>
+          </div>
+
+          <!-- Live Math Readout -->
+          <div class="rounded-lg bg-slate-950/90 border border-slate-800 p-3.5 space-y-2 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Physical Blocks Used:</span>
+              <span id="stat-blocks" class="font-mono font-bold text-white">20 / 64</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Active KV Cache VRAM:</span>
+              <span id="stat-vram" class="font-mono font-bold text-teal-300">3.75 MB</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">VRAM Saved vs No-Radix:</span>
+              <span id="stat-saved" class="font-mono font-bold text-emerald-400">58.3% (28 blocks)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Prefill Compute Avoided:</span>
+              <span id="stat-prefill" class="font-mono font-bold text-sky-400">87.5% (7/8 hits)</span>
+            </div>
+          </div>
+
+          <!-- Toast / Event Log -->
+          <div id="radix-event-banner" class="rounded-lg bg-teal-950/50 border border-teal-800/60 p-3 text-xs text-teal-200 leading-relaxed">
+            Radix Tree-KV active: 4 prompt blocks are pinned with <span class="font-mono font-semibold">ref_count = 8</span> and shared across all 8 reasoning branches.
+          </div>
+        </div>
+
+        <!-- Right Visuals: Physical GPU Block Pool + Radix Tree -->
+        <div class="lg:col-span-8 space-y-5">
+          <!-- GPU Physical Block Pool -->
+          <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h3 class="text-sm font-bold text-white">Physical GPU KV Block Pool <span class="text-xs font-mono font-normal text-slate-400">(16 tokens · 192 KB/block)</span></h3>
+                <p class="text-xs text-slate-400">Click any block to inspect its physical ID, owner branches, and reference count.</p>
+              </div>
+              <div class="flex items-center gap-3 text-[11px] font-medium">
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-teal-500 inline-block"></span>Shared Radix</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-indigo-500 inline-block"></span>Private / Decode</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span>CoW Fork</span>
+                <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-800 border border-slate-700 inline-block"></span>Free</span>
+              </div>
+            </div>
+
+            <div id="gpu-block-grid" class="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2"></div>
+
+            <!-- Selected Block Inspector -->
+            <div id="block-inspector" class="mt-4 rounded-lg bg-slate-950 border border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span class="text-slate-400">Inspector: <strong class="text-white font-mono">Click any physical block above</strong> to inspect its metadata (`block_id`, `ref_count`, `lock_count`, `192 KB` FP16 footprint).</span>
+            </div>
+          </div>
+
+          <!-- Radix Prefix Tree Topology -->
+          <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white">Radix Prefix Tree Topology <span class="text-xs font-mono font-normal text-slate-400">(Chained Block Hashing + LRU Eviction)</span></h3>
+              <span id="tree-mode-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-teal-500/15 text-teal-300 border border-teal-500/30">Tree Sharing ON</span>
+            </div>
+            <div id="radix-tree-view" class="space-y-3"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PANEL 2: SPECULATIVE DECODING ================= -->
+    <section id="panel-spec" class="hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div class="lg:col-span-4 rounded-xl bg-slate-900/90 border border-slate-800 p-5 space-y-5">
+          <div>
+            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Speculative Controls</h2>
+            <p class="text-xs text-slate-400 mt-1">Step through lossless rejection sampling (<span class="font-mono">min(1, p/q)</span>), residual resampling, and cross-boundary KV rollback.</p>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium">Draft Lookahead (gamma)</span>
+                <span id="val-gamma" class="font-mono font-bold text-teal-400">4 tokens</span>
+              </div>
+              <input id="slider-gamma" type="range" min="1" max="6" step="1" value="4" class="w-full cursor-pointer" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-300 font-medium">Active Batch Size (B)</span>
+                <span id="val-batch" class="font-mono font-bold text-sky-400">B = 1 (Memory-Bound)</span>
+              </div>
+              <input id="slider-batch" type="range" min="1" max="16" step="1" value="1" class="w-full cursor-pointer" />
+            </div>
+          </div>
+
+          <div id="adaptive-gate-box" class="rounded-lg bg-emerald-950/50 border border-emerald-700/50 p-3 text-xs text-emerald-200">
+            <strong>Adaptive Gamma Gate: ACTIVE</strong> — At <span class="font-mono">B=1</span>, Tesla T4 is memory-bandwidth bound, so verifying <span class="font-mono">gamma=4</span> draft tokens in one forward pass gives free speedup.
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btn-spec-step" type="button" class="px-3 py-2.5 rounded-lg text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white transition">
+              Run Verify Step
+            </button>
+            <button id="btn-spec-reset" type="button" class="px-3 py-2.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+              Reset Trace
+            </button>
+          </div>
+
+          <div class="rounded-lg bg-slate-950/90 border border-slate-800 p-3.5 space-y-2 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Steps Executed:</span>
+              <span id="spec-steps" class="font-mono font-bold text-white">0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Total Tokens Emitted:</span>
+              <span id="spec-emitted" class="font-mono font-bold text-emerald-400">0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Avg Tokens / Verify Pass:</span>
+              <span id="spec-ratio" class="font-mono font-bold text-teal-300">—</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">KV Blocks Rolled Back:</span>
+              <span id="spec-rolled" class="font-mono font-bold text-amber-400">0</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Leaked Physical Blocks:</span>
+              <span class="font-mono font-bold text-emerald-400">0 (Invariant Verified)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-5">
+          <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+            <h3 class="text-sm font-bold text-white mb-1">Latest Draft-Verify Pass <span class="text-xs font-mono font-normal text-slate-400">(Exact Distribution Equivalence)</span></h3>
+            <p class="text-xs text-slate-400 mb-4">Each drafted token is accepted with probability <span class="font-mono text-teal-300">min(1, p(x) / q(x))</span>. On first rejection, a bonus token is drawn from <span class="font-mono text-amber-300">norm(max(0, p - q))</span> and rejected KV blocks are immediately freed.</p>
+            <div id="spec-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+          </div>
+
+          <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+            <h3 class="text-sm font-bold text-white mb-2">Generated Output Stream</h3>
+            <div id="spec-stream" class="rounded-lg bg-slate-950 border border-slate-800 p-4 font-mono text-xs sm:text-sm text-slate-200 leading-relaxed min-h-[84px]">
+              <span class="text-slate-500">Prompt:</span> A store sells notebooks for $4 each and pens for $2 each. Maya buys 7 notebooks and 9 pens... <span class="text-teal-400 animate-pulse">▍</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PANEL 3: VERIFIED TESLA T4 BENCHMARKS ================= -->
+    <section id="panel-bench" class="hidden space-y-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+          <h3 class="text-sm font-bold text-white mb-1">Latency Reduction on NVIDIA Tesla T4</h3>
+          <p class="text-xs text-slate-400 mb-4">Qwen2.5-0.5B (FP16) · Best-of-8 parallel reasoning · 5 CUDA-synced repeats</p>
+          <div class="relative h-72">
+            <canvas id="chart-latency"></canvas>
+          </div>
+        </div>
+
+        <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+          <h3 class="text-sm font-bold text-white mb-1">Decode Throughput (Mean ± 95% Student-t CI)</h3>
+          <p class="text-xs text-slate-400 mb-4">Higher throughput with 38% tighter run-to-run confidence interval</p>
+          <div class="relative h-72">
+            <canvas id="chart-throughput"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exact Measurements Table -->
+      <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5 overflow-x-auto">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 class="text-sm font-bold text-white">Raw Verified Measurements (<span class="font-mono text-teal-300">results/study_summary.json</span>)</h3>
+          <span class="text-xs font-mono text-slate-400">PyTorch 2.11.0+cu130 · transformers 5.20.2 · Driver 580.178.04</span>
+        </div>
+        <table class="w-full text-left text-xs sm:text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400">
+              <th class="py-2.5 pr-4 font-semibold">Metric (Best-of-8, max_new_tokens=32)</th>
+              <th class="py-2.5 px-4 font-semibold text-right">No-Radix (Paged KV)</th>
+              <th class="py-2.5 px-4 font-semibold text-right">With Radix (Tree-KV)</th>
+              <th class="py-2.5 pl-4 font-semibold text-right">Measured Delta</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/70 font-mono">
+            <tr>
+              <td class="py-2.5 pr-4 font-sans text-slate-200">Time to First Token (TTFT p50) ↓</td>
+              <td class="py-2.5 px-4 text-right text-slate-300">222.80 ms</td>
+              <td class="py-2.5 px-4 text-right text-teal-300 font-bold">177.02 ms</td>
+              <td class="py-2.5 pl-4 text-right text-emerald-400 font-bold">-20.55%</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-4 font-sans text-slate-200">Decode Throughput (Mean ± 95% CI) ↑</td>
+              <td class="py-2.5 px-4 text-right text-slate-300">24.75 ± 1.18 tok/s</td>
+              <td class="py-2.5 px-4 text-right text-teal-300 font-bold">26.52 ± 0.73 tok/s</td>
+              <td class="py-2.5 pl-4 text-right text-emerald-400 font-bold">+7.15%</td>
+            </tr>
+            <tr>
+              <td class="py-2.5 pr-4 font-sans text-slate-200">End-to-End Tail Latency (E2E p99) ↓</td>
+              <td class="py-2.5 px-4 text-right text-slate-300">11,019.32 ms</td>
+              <td class="py-2.5 px-4 text-right text-teal-300 font-bold">10,020.75 ms</td>
+              <td class="py-2.5 pl-4 text-right text-emerald-400 font-bold">-9.06%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 12/12 Verification Gates -->
+      <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 class="text-sm font-bold text-white">Pytest Verification Gates (<span class="font-mono text-emerald-400">12 passed in 40.60s</span> on Kaggle T4)</h3>
+          <span class="text-xs font-mono text-slate-400">Phases 0 – 5</span>
+        </div>
+        <div id="gate-list" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-slate-800/80 mt-10 py-5 text-center text-xs text-slate-500">
+    TreeKV-Engine v1.0.0 · Built by Swayam Saini · Pure PyTorch LLM Serving Engine for Qwen2.5-0.5B
+  </footer>
+
+  <script>
+    // ==================== STATE ====================
+    const BLOCK_SIZE = 16;
+    const KB_PER_BLOCK = 192; // Qwen2.5-0.5B FP16: 24 layers * 2(K,V) * 2 KV heads * 64 head_dim * 2B * 16 tokens = 192 KB
+    const POOL_CAPACITY = 80;
+
+    const radixState = {
+      useRadix: true,
+      branches: 8,
+      promptLen: 64,
+      decodeLen: 32,
+      cowHighlighted: false,
+      selectedBlockId: null
+    };
+
+    const specState = {
+      gamma: 4,
+      batchSize: 1,
+      stepCount: 0,
+      totalEmitted: 0,
+      totalRolledBack: 0,
+      tokens: [],
+      lastPass: []
+    };
+
+    const DEMO_TOKENS = [
+      "Step", "1:", "7", "notebooks", "cost", "7", "x", "$4", "=", "$28.",
+      "Step", "2:", "9", "pens", "cost", "9", "x", "$2", "=", "$18.",
+      "Total", "cost", "is", "$28", "+", "$18", "=", "$46.",
+      "Change", "from", "$50", "is", "$50", "-", "$46", "=", "$4."
+    ];
+
+    const VERIFIED_TESTS = [
+      "tests/test_phase0_correctness.py::test_kv_cache_matches_full_forward_offline",
+      "tests/test_phase0_correctness.py::test_exact_match_vs_huggingface_qwen2_5",
+      "tests/test_phase1_paged_kv.py::test_paged_kv_shuffled_matches_phase0_offline",
+      "tests/test_phase1_paged_kv.py::test_copy_on_write_isolation",
+      "tests/test_phase2_and_3.py::test_lifo_preemption_and_recovery",
+      "tests/test_phase2_and_3.py::test_radix_tree_prefix_sharing_and_lru_eviction",
+      "tests/test_phase2_and_3.py::test_end_to_end_engine_radix_matches_no_radix",
+      "tests/test_phase4_speculative.py::test_lossless_distribution_equivalence",
+      "tests/test_phase4_speculative.py::test_cross_boundary_kv_rollback_zero_leaks",
+      "tests/test_phase4_speculative.py::test_prompt_lookup_and_adaptive_gamma",
+      "tests/test_phase5_bench.py::test_poisson_trace_determinism",
+      "tests/test_phase5_bench.py::test_ci95_and_percentile_exact"
+    ];
+
+    let chartsInitialized = false;
+
+    // ==================== TAB SWITCHING ====================
+    function switchTab(target) {
+      const tabs = ["radix", "spec", "bench"];
+      tabs.forEach((t) => {
+        const btn = document.getElementById("tab-" + t);
+        const panel = document.getElementById("panel-" + t);
+        if (t === target) {
+          btn.className = "tab-active px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition";
+          panel.classList.remove("hidden");
+        } else {
+          btn.className = "tab-idle px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition";
+          panel.classList.add("hidden");
+        }
+      });
+      if (target === "bench" && !chartsInitialized) {
+        initBenchmarkCharts();
+        chartsInitialized = true;
+      }
+    }
+
+    // ==================== PANEL 1: RADIX SIMULATOR ====================
+    function renderRadix() {
+      const N = radixState.branches;
+      const pBlocks = Math.ceil(radixState.promptLen / BLOCK_SIZE);
+      const dBlocks = Math.ceil(radixState.decodeLen / BLOCK_SIZE);
+
+      const noRadixBlocks = N * (pBlocks + dBlocks);
+      const radixBlocks = pBlocks + N * dBlocks;
+      const activeBlocks = radixState.useRadix ? radixBlocks : noRadixBlocks;
+      const poolSize = Math.max(POOL_CAPACITY, activeBlocks + 8);
+
+      const vramMB = (activeBlocks * KB_PER_BLOCK) / 1024;
+      const savedBlocks = radixState.useRadix ? Math.max(0, noRadixBlocks - radixBlocks) : 0;
+      const savedPct = noRadixBlocks > 0 ? (savedBlocks / noRadixBlocks) * 100 : 0;
+      const prefillAvoidedPct = radixState.useRadix ? ((N - 1) / N) * 100 : 0;
+
+      // Update mode buttons
+      const btnNo = document.getElementById("btn-mode-noradix");
+      const btnYes = document.getElementById("btn-mode-radix");
+      if (radixState.useRadix) {
+        btnYes.className = "px-3 py-2 rounded-md text-xs font-semibold bg-teal-600 text-white shadow transition";
+        btnNo.className = "px-3 py-2 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition";
+      } else {
+        btnNo.className = "px-3 py-2 rounded-md text-xs font-semibold bg-slate-700 text-white shadow transition";
+        btnYes.className = "px-3 py-2 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition";
+      }
+
+      // Labels & stats
+      document.getElementById("val-branches").textContent = `${N} branches`;
+      document.getElementById("val-prompt").textContent = `${radixState.promptLen} tokens (${pBlocks} blk)`;
+      document.getElementById("val-decode").textContent = `${radixState.decodeLen} tokens (${dBlocks} blk)`;
+      document.getElementById("stat-blocks").textContent = `${activeBlocks} / ${poolSize}`;
+      document.getElementById("stat-vram").textContent = `${vramMB.toFixed(2)} MB`;
+      document.getElementById("stat-saved").textContent = radixState.useRadix
+        ? `${savedPct.toFixed(1)}% (${savedBlocks} blocks)`
+        : `0.0% (baseline)`;
+      document.getElementById("stat-prefill").textContent = radixState.useRadix
+        ? `${prefillAvoidedPct.toFixed(1)}% (${N - 1}/${N} hits)`
+        : `0.0% (0/${N} hits)`;
+
+      const treeBadge = document.getElementById("tree-mode-badge");
+      treeBadge.textContent = radixState.useRadix ? "Tree Sharing ON" : "Isolated Copies (No Sharing)";
+      treeBadge.className = radixState.useRadix
+        ? "px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-teal-500/15 text-teal-300 border border-teal-500/30"
+        : "px-2.5 py-0.5 rounded-full text-[11px] font-mono bg-slate-700/60 text-slate-300 border border-slate-600";
+
+      const banner = document.getElementById("radix-event-banner");
+      if (radixState.cowHighlighted && radixState.useRadix) {
+        banner.className = "rounded-lg bg-amber-950/60 border border-amber-700/60 p-3 text-xs text-amber-200 leading-relaxed";
+        banner.innerHTML = `<strong>Copy-on-Write (CoW) Split Triggered:</strong> Branch 0 wrote a divergent token on a shared boundary block (<span class="font-mono">ref_count &gt; 1</span>). Engine allocated a fresh physical block, copied 192 KB once, and decremented parent <span class="font-mono">ref_count</span> cleanly.`;
+      } else if (radixState.useRadix) {
+        banner.className = "rounded-lg bg-teal-950/50 border border-teal-800/60 p-3 text-xs text-teal-200 leading-relaxed";
+        banner.innerHTML = `Radix Tree-KV active: <strong>${pBlocks}</strong> prompt blocks are pinned with <span class="font-mono font-semibold">ref_count = ${N}</span> and shared across all ${N} branches, saving <strong>${savedBlocks}</strong> physical blocks (${((savedBlocks * KB_PER_BLOCK) / 1024).toFixed(2)} MB).`;
+      } else {
+        banner.className = "rounded-lg bg-slate-950 border border-slate-700 p-3 text-xs text-slate-300 leading-relaxed";
+        banner.innerHTML = `No-Radix baseline: Each of the ${N} branches duplicates all ${pBlocks} prompt blocks independently (${N * pBlocks} prompt blocks total) before decoding.`;
+      }
+
+      // Build physical block metadata
+      const blocksMeta = [];
+      let bid = 0;
+      if (radixState.useRadix) {
+        for (let i = 0; i < pBlocks; i++) {
+          blocksMeta.push({
+            id: bid++,
+            type: "shared",
+            label: `P${i}`,
+            ref: N,
+            lock: N,
+            owner: `Shared by Branches 0..${N - 1}`
+          });
+        }
+        for (let b = 0; b < N; b++) {
+          for (let d = 0; d < dBlocks; d++) {
+            const isCow = radixState.cowHighlighted && b === 0 && d === 0;
+            blocksMeta.push({
+              id: bid++,
+              type: isCow ? "cow" : "private",
+              label: `B${b}`,
+              ref: 1,
+              lock: 1,
+              owner: isCow ? `Branch 0 (CoW cloned block)` : `Branch ${b} (Decode blk ${d})`
+            });
+          }
+        }
+      } else {
+        for (let b = 0; b < N; b++) {
+          for (let i = 0; i < pBlocks + dBlocks; i++) {
+            blocksMeta.push({
+              id: bid++,
+              type: "private",
+              label: `B${b}`,
+              ref: 1,
+              lock: 1,
+              owner: i < pBlocks ? `Branch ${b} (Duplicated prompt blk ${i})` : `Branch ${b} (Decode blk ${i - pBlocks})`
+            });
+          }
+        }
+      }
+      while (blocksMeta.length < poolSize) {
+        blocksMeta.push({
+          id: bid++,
+          type: "free",
+          label: "—",
+          ref: 0,
+          lock: 0,
+          owner: "Unallocated (Available in BlockAllocator)"
+        });
+      }
+
+      // Render GPU Block Grid (cap visual grid at 80 cells with summary badge if larger)
+      const grid = document.getElementById("gpu-block-grid");
+      grid.innerHTML = "";
+      const visibleBlocks = blocksMeta.slice(0, 80);
+      visibleBlocks.forEach((blk) => {
+        const el = document.createElement("button");
+        el.type = "button";
+        let bg = "bg-slate-800/70 border-slate-700/70 text-slate-500";
+        if (blk.type === "shared") bg = "bg-teal-500/20 border-teal-400/60 text-teal-200";
+        else if (blk.type === "cow") bg = "bg-amber-500/25 border-amber-400 text-amber-200 ring-2 ring-amber-400/50";
+        else if (blk.type === "private") bg = "bg-indigo-500/20 border-indigo-400/50 text-indigo-200";
+
+        el.className = `block-cell rounded-md border p-1.5 text-center font-mono text-[10px] leading-tight cursor-pointer ${bg}`;
+        el.innerHTML = `<div class="font-bold">#${blk.id}</div><div class="text-[9px] opacity-85">${blk.type === "free" ? "free" : `r=${blk.ref}`}</div>`;
+        el.addEventListener("click", () => {
+          radixState.selectedBlockId = blk.id;
+          document.getElementById("block-inspector").innerHTML = `
+            <div class="flex flex-wrap items-center gap-3 font-mono text-xs">
+              <span class="px-2 py-0.5 rounded bg-slate-800 text-white font-bold">Block #${blk.id}</span>
+              <span class="text-slate-300">Owner: <strong class="text-teal-300">${blk.owner}</strong></span>
+              <span class="text-slate-300">ref_count: <strong class="text-white">${blk.ref}</strong></span>
+              <span class="text-slate-300">lock_count: <strong class="text-white">${blk.lock}</strong></span>
+              <span class="text-slate-400">Size: 192 KB (FP16)</span>
+            </div>
+          `;
+        });
+        grid.appendChild(el);
+      });
+
+      // Render Radix Tree View
+      const treeView = document.getElementById("radix-tree-view");
+      if (radixState.useRadix) {
+        const shownBranches = Math.min(N, 6);
+        let branchRows = "";
+        for (let b = 0; b < shownBranches; b++) {
+          const cowTag = radixState.cowHighlighted && b === 0
+            ? `<span class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px]">CoW Split</span>`
+            : "";
+          branchRows += `
+            <div class="flex items-center gap-2 pl-4 sm:pl-8">
+              <span class="text-slate-600 font-mono">├─</span>
+              <span class="px-2 py-1 rounded bg-indigo-500/15 border border-indigo-500/35 text-indigo-200 font-mono text-xs">Branch ${b}</span>
+              <span class="text-xs text-slate-400 font-mono">${dBlocks} private decode blocks (${dBlocks * KB_PER_BLOCK} KB)</span>
+              ${cowTag}
+            </div>
+          `;
+        }
+        if (N > shownBranches) {
+          branchRows += `<div class="pl-10 text-xs font-mono text-slate-500">└─ ... +${N - shownBranches} more parallel branches sharing the same root</div>`;
+        }
+        treeView.innerHTML = `
+          <div class="rounded-lg bg-teal-500/10 border border-teal-500/35 p-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="font-mono text-xs text-teal-200">
+              <strong>ROOT PREFIX NODE</strong> · ${pBlocks} physical blocks (${pBlocks * BLOCK_SIZE} tokens · ${((pBlocks * KB_PER_BLOCK) / 1024).toFixed(2)} MB)
+            </div>
+            <span class="px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 font-mono text-[11px]">ref_count=${N} · lock_count=${N} (LRU Protected)</span>
+          </div>
+          <div class="space-y-1.5">${branchRows}</div>
+        `;
+      } else {
+        const shownBranches = Math.min(N, 6);
+        let rows = "";
+        for (let b = 0; b < shownBranches; b++) {
+          rows += `
+            <div class="rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+              <span class="text-slate-200">Branch ${b}: <span class="text-rose-400">${pBlocks} duplicate prompt blks</span> + <span class="text-indigo-300">${dBlocks} decode blks</span></span>
+              <span class="text-slate-500">${((pBlocks + dBlocks) * KB_PER_BLOCK / 1024).toFixed(2)} MB</span>
+            </div>
+          `;
+        }
+        if (N > shownBranches) {
+          rows += `<div class="text-xs font-mono text-slate-500 pl-2">+${N - shownBranches} more unshared branch copies...</div>`;
+        }
+        treeView.innerHTML = `<div class="space-y-1.5">${rows}</div>`;
+      }
+    }
+
+    // ==================== PANEL 2: SPECULATIVE DECODING ====================
+    function renderSpecControls() {
+      const g = specState.gamma;
+      const b = specState.batchSize;
+      document.getElementById("val-gamma").textContent = `${g} tokens`;
+      const isComputeBound = b > 4;
+      document.getElementById("val-batch").textContent = isComputeBound ? `B = ${b} (Compute-Bound)` : `B = ${b} (Memory-Bound)`;
+
+      const gate = document.getElementById("adaptive-gate-box");
+      if (isComputeBound) {
+        gate.className = "rounded-lg bg-amber-950/50 border border-amber-700/50 p-3 text-xs text-amber-200";
+        gate.innerHTML = `<strong>Adaptive Gamma Gate: THROTTLED (gamma → 0)</strong> — At <span class="font-mono">B=${b}</span>, GPU is compute-bound (MLSys 2026 crossover). Engine disables drafting to avoid wasting FLOPs.`;
+      } else {
+        gate.className = "rounded-lg bg-emerald-950/50 border border-emerald-700/50 p-3 text-xs text-emerald-200";
+        gate.innerHTML = `<strong>Adaptive Gamma Gate: ACTIVE (gamma = ${g})</strong> — At <span class="font-mono">B=${b}</span>, GPU is memory-bandwidth bound, so verifying ${g} drafted tokens in 1 pass boosts tok/s.`;
+      }
+    }
+
+    function runSpecStep() {
+      const effectiveGamma = specState.batchSize > 4 ? 0 : specState.gamma;
+      specState.stepCount += 1;
+
+      if (effectiveGamma === 0) {
+        const nextTok = DEMO_TOKENS[specState.tokens.length % DEMO_TOKENS.length];
+        specState.tokens.push({ text: nextTok, kind: "standard" });
+        specState.totalEmitted += 1;
+        specState.lastPass = [{
+          tok: nextTok, p: 0.91, q: 0.91, acceptProb: 1.0, status: "STANDARD",
+          note: "Adaptive gate bypassed drafting at high batch size (B > 4)."
+        }];
+      } else {
+        const pass = [];
+        let rejectedIdx = -1;
+        // Deterministic pseudo-random pattern per step so every click is informative
+        const seedReject = (specState.stepCount * 2) % (effectiveGamma + 1);
+        for (let i = 0; i < effectiveGamma; i++) {
+          const tok = DEMO_TOKENS[(specState.tokens.length + i) % DEMO_TOKENS.length];
+          if (i === seedReject) {
+            const p = 0.24;
+            const q = 0.78;
+            const ratio = p / q;
+            pass.push({
+              tok, p, q, acceptProb: ratio, status: "REJECTED",
+              note: `u=0.62 > min(1, p/q)=${ratio.toFixed(2)} → Rejected & rolled back`
+            });
+            rejectedIdx = i;
+            break;
+          } else {
+            const p = Number((0.76 + (i * 0.05) % 0.2).toFixed(2));
+            const q = Number((0.72 + (i * 0.04) % 0.2).toFixed(2));
+            const ratio = Math.min(1, p / q);
+            pass.push({
+              tok, p, q, acceptProb: ratio, status: "ACCEPTED",
+              note: `Accepted via min(1, ${p}/${q}) = ${ratio.toFixed(2)}`
+            });
+          }
+        }
+        // Emit accepted tokens + 1 bonus/resampled token
+        const acceptedCount = rejectedIdx === -1 ? effectiveGamma : rejectedIdx;
+        for (let i = 0; i < acceptedCount; i++) {
+          specState.tokens.push({ text: pass[i].tok, kind: "accepted" });
+        }
+        const bonusTok = DEMO_TOKENS[(specState.tokens.length) % DEMO_TOKENS.length];
+        specState.tokens.push({ text: bonusTok, kind: "bonus" });
+        pass.push({
+          tok: bonusTok, p: 0.88, q: 0.12, acceptProb: 1.0, status: "BONUS",
+          note: rejectedIdx === -1 ? "All drafts accepted → +1 free bonus token!" : "Resampled from norm(max(0, p - q))"
+        });
+
+        specState.totalEmitted += acceptedCount + 1;
+        if (rejectedIdx !== -1 && (effectiveGamma - rejectedIdx) >= 2) {
+          specState.totalRolledBack += 1;
+        }
+        specState.lastPass = pass;
+      }
+
+      renderSpecOutput();
+    }
+
+    function renderSpecOutput() {
+      document.getElementById("spec-steps").textContent = String(specState.stepCount);
+      document.getElementById("spec-emitted").textContent = String(specState.totalEmitted);
+      document.getElementById("spec-ratio").textContent = specState.stepCount > 0
+        ? `${(specState.totalEmitted / specState.stepCount).toFixed(2)} tok/pass`
+        : "—";
+      document.getElementById("spec-rolled").textContent = String(specState.totalRolledBack);
+
+      const cards = document.getElementById("spec-cards");
+      if (specState.lastPass.length === 0) {
+        cards.innerHTML = `<div class="col-span-full rounded-lg bg-slate-950 border border-slate-800 p-6 text-center text-xs text-slate-400">Click <strong class="text-teal-300">Run Verify Step</strong> to watch draft tokens get verified against <span class="font-mono">Qwen2.5-0.5B</span>.</div>`;
+      } else {
+        cards.innerHTML = specState.lastPass.map((item, idx) => {
+          let cls = "border-emerald-500/40 bg-emerald-950/30";
+          let badge = "bg-emerald-500/20 text-emerald-300";
+          if (item.status === "REJECTED") {
+            cls = "border-rose-500/50 bg-rose-950/30";
+            badge = "bg-rose-500/20 text-rose-300";
+          } else if (item.status === "BONUS") {
+            cls = "border-amber-500/50 bg-amber-950/30";
+            badge = "bg-amber-500/20 text-amber-300";
+          } else if (item.status === "STANDARD") {
+            cls = "border-sky-500/50 bg-sky-950/30";
+            badge = "bg-sky-500/20 text-sky-300";
+          }
+          return `
+            <div class="rounded-lg border p-3 space-y-1.5 ${cls}">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-sm font-bold text-white">"${item.tok}"</span>
+                <span class="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${badge}">${item.status}</span>
+              </div>
+              <div class="font-mono text-[11px] text-slate-300">p(x)=${item.p.toFixed(2)} · q(x)=${item.q.toFixed(2)}</div>
+              <div class="text-[11px] text-slate-400 leading-snug">${item.note}</div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      const stream = document.getElementById("spec-stream");
+      const rendered = specState.tokens.map((t) => {
+        if (t.kind === "accepted") return `<span class="text-emerald-300">${t.text}</span>`;
+        if (t.kind === "bonus") return `<span class="text-amber-300 underline decoration-amber-500/50">${t.text}</span>`;
+        return `<span class="text-sky-300">${t.text}</span>`;
+      }).join(" ");
+      stream.innerHTML = `<span class="text-slate-500">Prompt:</span> A store sells notebooks for $4 each and pens for $2 each... <br/><span class="text-slate-500">Output:</span> ${rendered} <span class="text-teal-400 animate-pulse">▍</span>`;
+    }
+
+    // ==================== PANEL 3: BENCHMARK CHARTS ====================
+    function initBenchmarkCharts() {
+      const ctxLat = document.getElementById("chart-latency").getContext("2d");
+      new Chart(ctxLat, {
+        type: "bar",
+        data: {
+          labels: ["TTFT p50 (ms)", "E2E p99 (x100 ms)"],
+          datasets: [
+            {
+              label: "No-Radix (Paged KV)",
+              data: [222.80, 110.19],
+              backgroundColor: "rgba(100, 116, 139, 0.85)",
+              borderColor: "#94A3B8",
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              label: "With Radix (Tree-KV)",
+              data: [177.02, 100.21],
+              backgroundColor: "rgba(20, 184, 166, 0.85)",
+              borderColor: "#2DD4BF",
+              borderWidth: 1,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: "#CBD5E1", font: { family: "Inter", size: 12 } } }
+          },
+          scales: {
+            x: { ticks: { color: "#CBD5E1" }, grid: { color: "rgba(51,65,85,0.35)" } },
+            y: { ticks: { color: "#94A3B8" }, grid: { color: "rgba(51,65,85,0.35)" }, beginAtZero: true }
+          }
+        }
+      });
+
+      const ctxTput = document.getElementById("chart-throughput").getContext("2d");
+      new Chart(ctxTput, {
+        type: "bar",
+        data: {
+          labels: ["No-Radix (24.75 ± 1.18)", "With Radix (26.52 ± 0.73)"],
+          datasets: [
+            {
+              label: "Throughput (tok/s)",
+              data: [24.75, 26.52],
+              backgroundColor: ["rgba(100, 116, 139, 0.85)", "rgba(16, 185, 129, 0.85)"],
+              borderColor: ["#94A3B8", "#34D399"],
+              borderWidth: 1,
+              borderRadius: 6,
+              barPercentage: 0.55
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { ticks: { color: "#CBD5E1" }, grid: { display: false } },
+            y: { ticks: { color: "#94A3B8" }, grid: { color: "rgba(51,65,85,0.35)" }, min: 0, max: 32 }
+          }
+        }
+      });
+    }
+
+    function renderGateList() {
+      const list = document.getElementById("gate-list");
+      list.innerHTML = VERIFIED_TESTS.map((t) => `
+        <div class="rounded-lg bg-slate-950 border border-slate-800/90 px-3 py-2 flex items-center justify-between gap-2">
+          <span class="truncate text-slate-300" title="${t}">${t}</span>
+          <span class="shrink-0 px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-[10px] font-bold">PASSED</span>
+        </div>
+      `).join("");
+    }
+
+    // ==================== WIRE ALL CONTROLS ====================
+    document.getElementById("tab-radix").addEventListener("click", () => switchTab("radix"));
+    document.getElementById("tab-spec").addEventListener("click", () => switchTab("spec"));
+    document.getElementById("tab-bench").addEventListener("click", () => switchTab("bench"));
+
+    document.getElementById("btn-mode-noradix").addEventListener("click", () => {
+      radixState.useRadix = false;
+      radixState.cowHighlighted = false;
+      renderRadix();
+    });
+    document.getElementById("btn-mode-radix").addEventListener("click", () => {
+      radixState.useRadix = true;
+      renderRadix();
+    });
+    document.getElementById("slider-branches").addEventListener("input", (e) => {
+      radixState.branches = Number(e.target.value);
+      renderRadix();
+    });
+    document.getElementById("slider-prompt").addEventListener("input", (e) => {
+      radixState.promptLen = Number(e.target.value);
+      renderRadix();
+    });
+    document.getElementById("slider-decode").addEventListener("input", (e) => {
+      radixState.decodeLen = Number(e.target.value);
+      renderRadix();
+    });
+    document.getElementById("btn-step-decode").addEventListener("click", () => {
+      radixState.decodeLen = Math.min(64, radixState.decodeLen + 16);
+      document.getElementById("slider-decode").value = String(radixState.decodeLen);
+      renderRadix();
+    });
+    document.getElementById("btn-cow-split").addEventListener("click", () => {
+      radixState.useRadix = true;
+      radixState.cowHighlighted = true;
+      renderRadix();
+    });
+    document.getElementById("btn-radix-reset").addEventListener("click", () => {
+      radixState.useRadix = true;
+      radixState.branches = 8;
+      radixState.promptLen = 64;
+      radixState.decodeLen = 32;
+      radixState.cowHighlighted = false;
+      document.getElementById("slider-branches").value = "8";
+      document.getElementById("slider-prompt").value = "64";
+      document.getElementById("slider-decode").value = "32";
+      renderRadix();
+    });
+
+    document.getElementById("slider-gamma").addEventListener("input", (e) => {
+      specState.gamma = Number(e.target.value);
+      renderSpecControls();
+    });
+    document.getElementById("slider-batch").addEventListener("input", (e) => {
+      specState.batchSize = Number(e.target.value);
+      renderSpecControls();
+    });
+    document.getElementById("btn-spec-step").addEventListener("click", runSpecStep);
+    document.getElementById("btn-spec-reset").addEventListener("click", () => {
+      specState.stepCount = 0;
+      specState.totalEmitted = 0;
+      specState.totalRolledBack = 0;
+      specState.tokens = [];
+      specState.lastPass = [];
+      renderSpecOutput();
+    });
+
+    // Initial render
+    renderRadix();
+    renderSpecControls();
+    renderSpecOutput();
+    renderGateList();
+  </script>
+</body>
+</html>
