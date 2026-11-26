@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BanyanKV — Interactive LLM Inference Visualizer &amp; Tesla T4 Benchmarks</title>
+  <title>BanyanKV | KV Block Visualizer &amp; T4 Benchmarks</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -35,7 +35,7 @@
             <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">BanyanKV</h1>
             <span class="px-2 py-0.5 text-[11px] font-mono font-semibold rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">v1.0.0</span>
           </div>
-          <p class="text-xs text-slate-400">Radix Tree-KV LLM Inference Engine · One Shared Root, Many Reasoning Branches · Qwen2.5-0.5B (FP16)</p>
+          <p class="text-xs text-slate-400">Pure-PyTorch LLM inference engine for Qwen2.5-0.5B (FP16)</p>
         </div>
       </div>
 
@@ -256,7 +256,7 @@
           </div>
 
           <div id="adaptive-gate-box" class="rounded-lg bg-emerald-950/50 border border-emerald-700/50 p-3 text-xs text-emerald-200">
-            <strong>Adaptive Gamma Gate: ACTIVE</strong> — At <span class="font-mono">B=1</span>, Tesla T4 is memory-bandwidth bound, so verifying <span class="font-mono">gamma=4</span> draft tokens in one forward pass gives free speedup.
+            <strong>Adaptive Gamma Gate: ACTIVE</strong>: At <span class="font-mono">B=1</span>, Tesla T4 is memory-bandwidth bound, so verifying <span class="font-mono">gamma=4</span> draft tokens in one forward pass gives free speedup.
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -371,7 +371,7 @@
       <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-5">
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
           <h3 class="text-sm font-bold text-white">Pytest Verification Gates (<span class="font-mono text-emerald-400">12 passed in 40.60s</span> on Kaggle T4)</h3>
-          <span class="text-xs font-mono text-slate-400">Phases 0 – 5</span>
+          <span class="text-xs font-mono text-slate-400">12 unit &amp; integration tests</span>
         </div>
         <div id="gate-list" class="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono"></div>
       </div>
@@ -379,7 +379,7 @@
   </main>
 
   <footer class="border-t border-slate-800/80 mt-10 py-5 text-center text-xs text-slate-500">
-    BanyanKV v1.0.0 · Built by Swayam Saini · Pure PyTorch LLM Serving Engine for Qwen2.5-0.5B
+    BanyanKV v1.0.0 · BanyanKV · Swayam Saini
   </footer>
 
   <script>
@@ -649,10 +649,10 @@
       const gate = document.getElementById("adaptive-gate-box");
       if (isComputeBound) {
         gate.className = "rounded-lg bg-amber-950/50 border border-amber-700/50 p-3 text-xs text-amber-200";
-        gate.innerHTML = `<strong>Adaptive Gamma Gate: THROTTLED (gamma → 0)</strong> — At <span class="font-mono">B=${b}</span>, GPU is compute-bound (MLSys 2026 crossover). Engine disables drafting to avoid wasting FLOPs.`;
+        gate.innerHTML = `<strong>Adaptive Gamma Gate: THROTTLED (gamma → 0)</strong>: At <span class="font-mono">B=${b}</span>, GPU is compute-bound (MLSys 2026 crossover). Engine disables drafting to avoid wasting FLOPs.`;
       } else {
         gate.className = "rounded-lg bg-emerald-950/50 border border-emerald-700/50 p-3 text-xs text-emerald-200";
-        gate.innerHTML = `<strong>Adaptive Gamma Gate: ACTIVE (gamma = ${g})</strong> — At <span class="font-mono">B=${b}</span>, GPU is memory-bandwidth bound, so verifying ${g} drafted tokens in 1 pass boosts tok/s.`;
+        gate.innerHTML = `<strong>Adaptive Gamma Gate: ACTIVE (gamma = ${g})</strong>: At <span class="font-mono">B=${b}</span>, GPU is memory-bandwidth bound, so verifying ${g} drafted tokens in 1 pass boosts tok/s.`;
       }
     }
 
