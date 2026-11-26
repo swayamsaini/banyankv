@@ -9,6 +9,6 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: pip install pytest ruff mypy
+      - run: pip install pytest ruff mypy transformers
       - run: ruff check configs/ treekv/ tests/
-      - run: pytest -v tests/ -k "not huggingface_qwen2_5"
+      - run: PYTHONPATH=. pytest -v tests/ -k "not huggingface_qwen2_5"
