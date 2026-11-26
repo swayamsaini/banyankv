@@ -1,4 +1,4 @@
-name: TreeKV-Engine CI
+name: BanyanKV CI
 on: [push, pull_request]
 jobs:
   quality-and-tests:

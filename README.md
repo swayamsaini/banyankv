@@ -1,6 +1,10 @@
-# TreeKV-Engine
+# BanyanKV
 
-A from-scratch, pure-PyTorch **Mini LLM Inference Engine** targeting [`Qwen/Qwen2.5-0.5B`](https://huggingface.co/Qwen/Qwen2.5-0.5B), designed for parallel reasoning workloads (Best-of-N). Built with clean modular interfaces, strict correctness gates verified token-for-token against Hugging Face, and reproducible CUDA-synced benchmarking on NVIDIA Tesla T4.
+> **Why *BanyanKV*?** Like a banyan tree—where one shared root trunk branches out into many independent aerial roots—**BanyanKV** shares a single physical KV-cache prefix root across parallel Best-of-N reasoning trajectories via Radix Tree prefix sharing and Copy-on-Write isolation.
+
+**[Live Interactive Visualizer & T4 Dashboard](https://swayamsaini.github.io/banyankv/)**
+
+A from-scratch, pure-PyTorch **Mini LLM Inference Engine** targeting [`Qwen/Qwen2.5-0.5B`](https://huggingface.co/Qwen/Qwen2.5-0.5B), designed for parallel reasoning workloads. Built with clean modular interfaces, strict correctness gates verified token-for-token against Hugging Face, and reproducible CUDA-synced benchmarking on NVIDIA Tesla T4.
 
 ## Highlights
 
@@ -17,47 +21,16 @@ A from-scratch, pure-PyTorch **Mini LLM Inference Engine** targeting [`Qwen/Qwen
 
 Measured on **Kaggle NVIDIA Tesla T4** (`15,360 MiB VRAM`, `PyTorch 2.11.0+cu130`, `transformers 5.20.2`, `Qwen/Qwen2.5-0.5B` in `FP16`, Best-of-8 parallel reasoning branches, `max_new_tokens=32`, 5 CUDA-synced repeats):
 
-![TreeKV-Engine Tesla T4 Best-of-8 Benchmark](docs/t4_benchmark_best_of_8.png)
+![BanyanKV Tesla T4 Best-of-8 Benchmark](docs/t4_benchmark_best_of_8.png)
 
-| Metric (Best-of-8, 5 repeats) | No-Radix (Paged KV) | With Radix (Tree-KV) | Improvement |
+| Metric (Best-of-8, 5 repeats) | No-Radix (Paged KV) | With Radix (BanyanKV) | Improvement |
 |---|---:|---:|---:|
 | **TTFT p50 (ms)** ↓ | `222.80 ms` | **`177.02 ms`** | **`-20.55%`** |
 | **Throughput (tok/s, Mean ± 95% CI)** ↑ | `24.75 ± 1.18` | **`26.52 ± 0.73`** | **`+7.15%`** |
 | **End-to-End p99 (ms)** ↓ | `11,019.32 ms` | **`10,020.75 ms`** | **`-9.06%`** |
 | **Correctness Gate (`pytest -v tests/`)** | — | **`12 passed in 40.60s`** | Exact HF match |
 
-> **Engineering Note:** Even on a short ~56-token math prompt where autoregressive decode dominates total wall time, Radix Tree-KV cuts median **TTFT by 20.6%**, trims **p99 E2E latency by 9.1%**, and raises throughput by **+7.2%** with tighter variance (`±0.73` vs `±1.18 tok/s`). Longer shared system prompts (512–2,048 tokens) further amplify prefill savings. Raw output is archived in [`results/study_summary.json`](results/study_summary.json).
-
----
-
-## Architecture
-
-```text
-configs/
-  qwen2_5_0_5b.py          # Exact Qwen2.5-0.5B hyperparameters & KV math
-treekv/
-  interfaces.py            # Clean Protocol contracts (PrefixCache, BlockAllocator, Drafter)
-  model/
-    layers.py              # RMSNorm, RoPE, SwiGLU
-    attention.py           # 7:1 GQA with contiguous & paged KV paths
-    qwen2.py               # Scratch Qwen2ForCausalLM + Hugging Face weight loader
-    sampler.py             # Greedy & temperature/top-p sampling
-  memory/
-    block_manager.py       # 16-token PagedKVCache, BlockAllocator, Copy-on-Write
-    radix_cache.py         # RadixBlockCache (LRU eviction) & NullPrefixCache
-  engine/
-    sequence.py            # Sequence FSM & timing metadata
-    scheduler.py           # Iteration-level ContinuousScheduler + LIFO preemption
-    speculative.py         # Lossless rejection sampling, KV rollback, Prompt-Lookup drafter
-    runner.py              # End-to-end TreeKVEngine orchestrator
-  bench/
-    workloads.py           # Deterministic Poisson arrival traces
-    metrics.py             # CUDA-synced timing, p50/p99, 95% Student-t CI
-    run_study.py           # Reproducible Best-of-N ablation study runner
-tests/                     # 12 unit & integration gate tests (Phases 0–5)
-notebooks/
-  kaggle_t4_runner.ipynb   # One-click free Kaggle T4 x2 verification & benchmark notebook
-```
+> **Engineering Note:** Even on a short ~56-token math prompt where autoregressive decode dominates total wall time, BanyanKV's Radix prefix sharing cuts median **TTFT by 20.6%**, trims **p99 E2E latency by 9.1%**, and raises throughput by **+7.2%** with tighter variance (`±0.73` vs `±1.18 tok/s`). Longer shared system prompts (512–2,048 tokens) further amplify prefill savings. Raw output is archived in [`results/study_summary.json`](results/study_summary.json).
 
 ---
 
